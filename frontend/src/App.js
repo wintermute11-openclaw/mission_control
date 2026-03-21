@@ -1,9 +1,11 @@
 import React from 'react';
+import SubagentOverview from './components/SubagentOverview';
 
 function MissionControlDashboard() {
   return (
     <div style={{ padding: 20 }}>
       <h1>Mission Control Dashboard (Beta)</h1>
+      <SubagentOverview />
       <div style={{
         width: '100%',
         height: '400px',
