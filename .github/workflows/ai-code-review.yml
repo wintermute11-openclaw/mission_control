@@ -1,0 +1,53 @@
+name: AI Code Review and Push
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - feature/*
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install ESLint
+        run: npm install -g eslint
+
+      - name: Run Review Agent
+        run: |
+          python3 scripts/review_agent.py ./src
+
+      - name: Commit & Push fixes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "AI: Automatische Codekorrekturen nach Review"
+          git push
+        continue-on-error: true
+
+  pull-request:
+    needs: review
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'AI: Changes after Review'
+          branch: 'ai-review-fixes'
+          base: 'main'
+          title: 'AI Review Fixes'
+          body: |-
+            Automatisch generierte Änderungen nach AI-Code-Review.
