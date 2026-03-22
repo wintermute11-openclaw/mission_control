@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-// Dummy data
+// In-memory dummy data (to be replaced with persistent storage)
 const agents = [
   { id: 'agent1', name: 'Alpha', status: 'active', lastSeen: '2026-03-21T20:00:00Z' },
   { id: 'agent2', name: 'Beta', status: 'offline', lastSeen: '2026-03-21T19:50:00Z' }
@@ -17,27 +17,43 @@ const logs = [
   { id: 'log2', agentId: 'agent2', message: 'Data report delayed', timestamp: '2026-03-21T20:00:00Z' }
 ];
 
-// Helper function to find agent by ID
+// --- Helper functions ---
+
+/**
+ * Find an agent by ID
+ * @param {string} agentId
+ * @returns {object|undefined}
+ */
 function findAgent(agentId) {
   return agents.find(agent => agent.id === agentId);
 }
 
-// Helper function to validate agent data
+/**
+ * Validate agent data for required fields and types
+ * @param {object} data
+ * @returns {boolean}
+ */
 function validateAgent(data) {
-  return typeof data.id === 'string' &&
+  return data && typeof data.id === 'string' &&
          typeof data.name === 'string' &&
          typeof data.status === 'string' &&
          (new Date(data.lastSeen)).toString() !== 'Invalid Date';
 }
 
-// Helper function to validate task data
+/**
+ * Validate task data for required fields and types
+ * @param {object} data
+ * @returns {boolean}
+ */
 function validateTask(data) {
-  return typeof data.id === 'string' &&
+  return data && typeof data.id === 'string' &&
          typeof data.agentId === 'string' &&
          typeof data.description === 'string' &&
          typeof data.status === 'string' &&
          (new Date(data.createdAt)).toString() !== 'Invalid Date';
 }
+
+// --- API Endpoints ---
 
 // Get all agent statuses
 router.get('/agents', (req, res) => {
@@ -49,27 +65,29 @@ router.get('/tasks', (req, res) => {
   res.json(tasks);
 });
 
-// Get tasks for an agent
+// Get tasks for a specific agent
 router.get('/agents/:agentId/tasks', (req, res) => {
   const agentId = req.params.agentId;
-  if (!findAgent(agentId)) {
+  const agent = findAgent(agentId);
+  if (!agent) {
     return res.status(404).json({ error: 'Agent not found' });
   }
   const agentTasks = tasks.filter(task => task.agentId === agentId);
   res.json(agentTasks);
 });
 
-// Get logs for an agent
+// Get logs for a specific agent
 router.get('/agents/:agentId/logs', (req, res) => {
   const agentId = req.params.agentId;
-  if (!findAgent(agentId)) {
+  const agent = findAgent(agentId);
+  if (!agent) {
     return res.status(404).json({ error: 'Agent not found' });
   }
   const agentLogs = logs.filter(log => log.agentId === agentId);
   res.json(agentLogs);
 });
 
-// POST create a new agent
+// Create a new agent with validation
 router.post('/agents', (req, res) => {
   const newAgent = req.body;
   if (!validateAgent(newAgent)) {
@@ -78,11 +96,13 @@ router.post('/agents', (req, res) => {
   if (findAgent(newAgent.id)) {
     return res.status(409).json({ error: 'Agent with this ID already exists' });
   }
+
+  // Add to in-memory storage (replace with DB persistence in future)
   agents.push(newAgent);
   res.status(201).json(newAgent);
 });
 
-// POST create a new task
+// Create a new task with validation
 router.post('/tasks', (req, res) => {
   const newTask = req.body;
   if (!validateTask(newTask)) {
@@ -92,6 +112,8 @@ router.post('/tasks', (req, res) => {
   if (!agentExists) {
     return res.status(404).json({ error: 'Agent for the task not found' });
   }
+
+  // Add to in-memory storage (replace with DB persistence in future)
   tasks.push(newTask);
   res.status(201).json(newTask);
 });
