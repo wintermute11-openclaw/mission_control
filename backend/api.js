@@ -1,6 +1,5 @@
 const express = require('express');
-const app = express();
-app.use(express.json());
+const router = express.Router();
 
 // Dummy data
 const agents = [
@@ -18,34 +17,84 @@ const logs = [
   { id: 'log2', agentId: 'agent2', message: 'Data report delayed', timestamp: '2026-03-21T20:00:00Z' }
 ];
 
-// Endpoints
+// Helper function to find agent by ID
+function findAgent(agentId) {
+  return agents.find(agent => agent.id === agentId);
+}
+
+// Helper function to validate agent data
+function validateAgent(data) {
+  return typeof data.id === 'string' &&
+         typeof data.name === 'string' &&
+         typeof data.status === 'string' &&
+         (new Date(data.lastSeen)).toString() !== 'Invalid Date';
+}
+
+// Helper function to validate task data
+function validateTask(data) {
+  return typeof data.id === 'string' &&
+         typeof data.agentId === 'string' &&
+         typeof data.description === 'string' &&
+         typeof data.status === 'string' &&
+         (new Date(data.createdAt)).toString() !== 'Invalid Date';
+}
 
 // Get all agent statuses
-app.get('/agents', (req, res) => {
+router.get('/agents', (req, res) => {
   res.json(agents);
 });
 
 // Get all tasks
-app.get('/tasks', (req, res) => {
+router.get('/tasks', (req, res) => {
   res.json(tasks);
 });
 
 // Get tasks for an agent
-app.get('/agents/:agentId/tasks', (req, res) => {
+router.get('/agents/:agentId/tasks', (req, res) => {
   const agentId = req.params.agentId;
+  if (!findAgent(agentId)) {
+    return res.status(404).json({ error: 'Agent not found' });
+  }
   const agentTasks = tasks.filter(task => task.agentId === agentId);
   res.json(agentTasks);
 });
 
 // Get logs for an agent
-app.get('/agents/:agentId/logs', (req, res) => {
+router.get('/agents/:agentId/logs', (req, res) => {
   const agentId = req.params.agentId;
+  if (!findAgent(agentId)) {
+    return res.status(404).json({ error: 'Agent not found' });
+  }
   const agentLogs = logs.filter(log => log.agentId === agentId);
   res.json(agentLogs);
 });
 
-// Server start
-const PORT = 3000;
-app.listen(PORT, () => {
-  console.log(`Mission Control API listening on port ${PORT}`);
+// POST create a new agent
+router.post('/agents', (req, res) => {
+  const newAgent = req.body;
+  if (!validateAgent(newAgent)) {
+    return res.status(400).json({ error: 'Invalid agent data' });
+  }
+  if (findAgent(newAgent.id)) {
+    return res.status(409).json({ error: 'Agent with this ID already exists' });
+  }
+  agents.push(newAgent);
+  res.status(201).json(newAgent);
 });
+
+// POST create a new task
+router.post('/tasks', (req, res) => {
+  const newTask = req.body;
+  if (!validateTask(newTask)) {
+    return res.status(400).json({ error: 'Invalid task data' });
+  }
+  const agentExists = findAgent(newTask.agentId);
+  if (!agentExists) {
+    return res.status(404).json({ error: 'Agent for the task not found' });
+  }
+  tasks.push(newTask);
+  res.status(201).json(newTask);
+});
+
+module.exports = router;
+
